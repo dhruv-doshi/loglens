@@ -13,7 +13,7 @@ dependencies = ["drain3>=0.9.11"]
 
 [project.optional-dependencies]
 ai = ["sentence-transformers>=2.2", "rank-bm25>=0.2"]
-dev = ["pytest>=7"]
+dev = ["pytest>=7", "build>=1.0"]
 
 [project.scripts]
 loglens = "loglens.cli:main"
