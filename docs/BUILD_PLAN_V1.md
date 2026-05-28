@@ -322,6 +322,19 @@ stdlib ANSI only, per the "no `rich`/`colorama`" principle.
 placeholders; piping output or setting `NO_COLOR=1` yields plain text;
 `render_flows(flows)` (no kwarg) still returns plain text.
 
+### Step 9.3 — Color the --query output too (v0.1.3)
+```
+Phase 9.2 only painted the flow view. The CLI `--query` path still printed
+`f"{score}\t{record.raw}"` — uncolored raw lines. Expose a small
+`format_query_result(record, score, *, color)` helper from `render.py` that
+reuses the flow-row formatter (dim ts, level palette, magenta source,
+template-placeholder dimming) and prefixes a dim score. Wire it into
+`cli.py`'s query branch so query output follows the same color rules as the
+flow view.
+```
+**Accept when:** `loglens file.log --query "..."` in a TTY shows colored
+score + level + source + message; piping or `--no-color` yields plain text.
+
 ---
 
 ## Final V1 layout (target)

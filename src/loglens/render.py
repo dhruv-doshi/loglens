@@ -42,6 +42,11 @@ def _fmt_header(flow: Flow, color: bool) -> str:
     )
 
 
+def format_query_result(record: LogRecord, score: float, *, color: bool = False) -> str:
+    score_str = paint(f"{score:.3f}", DIM, color)
+    return f"{score_str}{_fmt_record(record, color)}"
+
+
 def render_flows(flows: list[Flow], *, color: bool = False) -> str:
     out: list[str] = []
     for flow in flows:

@@ -5,6 +5,7 @@ import sys
 
 from .colors import should_color
 from .lens import LogLens
+from .render import format_query_result
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -34,7 +35,7 @@ def main(argv: list[str] | None = None) -> int:
             print(str(e), file=sys.stderr)
             return 1
         for record, score in results:
-            print(f"{score:.3f}\t{record.raw}")
+            print(format_query_result(record, score, color=color))
         return 0
 
     print(lens.show(color=color))

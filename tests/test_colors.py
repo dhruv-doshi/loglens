@@ -2,7 +2,7 @@ from datetime import datetime
 
 from loglens.colors import RESET, level_color, should_color
 from loglens.models import Flow, LogRecord
-from loglens.render import render_flows
+from loglens.render import format_query_result, render_flows
 
 
 def _rec(seq, **kw):
@@ -45,6 +45,23 @@ def test_render_color_off_has_no_ansi():
     )
     out = render_flows([f], color=False)
     assert "\x1b[" not in out
+
+
+def test_format_query_result_plain():
+    r = _rec(0, ts=datetime(2026, 1, 1), level="WARN", source="payment")
+    r.message = "timeout"
+    out = format_query_result(r, 0.421)
+    assert out.startswith("0.421")
+    assert "WARN" in out and "payment" in out and "timeout" in out
+    assert "\x1b[" not in out
+
+
+def test_format_query_result_color():
+    r = _rec(0, ts=datetime(2026, 1, 1), level="WARN", source="payment")
+    r.message = "timeout"
+    out = format_query_result(r, 0.421, color=True)
+    assert "0.421" in out
+    assert "\x1b[" in out
 
 
 def test_render_color_on_emits_ansi_and_resets():
