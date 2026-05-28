@@ -42,6 +42,14 @@ everything downstream (renderers, AI, the future tracer) consumes that object.
 6. Presentation      presets render the same Flow graph (CLI + library)
 ```
 
+The renderer takes an opt-in `color` flag and emits ANSI escapes only when asked
+(stdlib only, no `rich`/`colorama`). The CLI auto-enables color when stdout is a
+TTY and `NO_COLOR` is unset; `--color` / `--no-color` force the choice. Levels,
+template placeholders, flow IDs, sources, and timestamps each get a distinct
+treatment so an architect's eye can find the warns and errors without reading
+every line. The library API (`lens.show()` / `render_flows()`) defaults
+`color=False` so structured callers and tests get plain text.
+
 **Core principle:** the deterministic core is model-free and explainable. The embedding
 model only powers the semantic query; flow reconstruction needs no model at all.
 

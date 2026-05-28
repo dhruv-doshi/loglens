@@ -47,8 +47,8 @@ class LogLens:
         self.correlator.resolve(self._records)
         return build_flows(self._records)
 
-    def show(self) -> str:
-        return render_flows(self.flows())
+    def show(self, *, color: bool = False) -> str:
+        return render_flows(self.flows(), color=color)
 
     def query(self, text: str, top_k: int = 10):
         try:

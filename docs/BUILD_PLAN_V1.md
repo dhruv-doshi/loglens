@@ -293,6 +293,37 @@ before the real PyPI.
 
 ---
 
+## Phase 9 — Post-release polish
+
+Added after v0.1.0 shipped, in response to real-log feedback.
+
+### Step 9.1 — Mixed tz-aware/naive timestamps (v0.1.1)
+```
+Real logs interleave ISO-8601 (tz-aware) and syslog/missing (naive) timestamps.
+`build_flows` and `Correlator.resolve` sorted on `r.ts or datetime.min`, which
+Python refuses to compare across awareness. Add a shared `_sortable()` helper
+in models.py that coerces aware datetimes to tz-naive UTC for sort-key purposes
+only; stored `ts` keeps its original tzinfo. Add a regression test mixing both.
+```
+**Accept when:** ingesting a log with both ISO-Z and syslog timestamps doesn't raise.
+
+### Step 9.2 — ANSI color in CLI (v0.1.2)
+```
+Add `src/loglens/colors.py` with ANSI escape constants, a level→color map,
+and `should_color(stream)` honoring `NO_COLOR` and TTY detection. Update
+`render_flows(flows, *, color: bool = False)` to paint flow IDs (cyan+bold),
+origins/timestamps/template-placeholders (dim), sources (magenta), and levels
+(green INFO, yellow WARN, red ERROR/FATAL). Library default stays `color=False`
+so callers and tests get plain text. CLI adds mutually exclusive `--color` /
+`--no-color`, falling back to `should_color(sys.stdout)`. No new runtime deps —
+stdlib ANSI only, per the "no `rich`/`colorama`" principle.
+```
+**Accept when:** `loglens file.log` in a TTY shows colored levels and dim
+placeholders; piping output or setting `NO_COLOR=1` yields plain text;
+`render_flows(flows)` (no kwarg) still returns plain text.
+
+---
+
 ## Final V1 layout (target)
 
 ```
@@ -309,11 +340,12 @@ loglens/
 │   ├── parser.py      # Drain3 wrapper
 │   ├── correlate.py   # 4-tier ID cascade
 │   ├── render.py      # flow → text tree
+│   ├── colors.py      # ANSI palette + TTY/NO_COLOR detection (v0.1.2)
 │   ├── analyzer.py    # optional semantic query
 │   ├── lens.py        # LogLens facade + logging.Handler
 │   └── cli.py         # argparse entry point
 └── tests/             # one file per module
 ```
 
-Eight code modules, one test file each. Base runtime dependency: `drain3`.
+Nine code modules, one test file each. Base runtime dependency: `drain3`.
 Everything else is standard library or an opt-in extra.

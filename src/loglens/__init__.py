@@ -1,4 +1,4 @@
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 from .lens import LogLens, LogLensHandler
 from .models import Flow, LogRecord

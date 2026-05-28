@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import sys
 
+from .colors import should_color
 from .lens import LogLens
 
 
@@ -11,7 +12,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("logfile", help="Path to a log file.")
     ap.add_argument("--query", metavar="TEXT", help="Run semantic query instead of flow view.")
     ap.add_argument("--top-k", type=int, default=10, help="Number of query results (default 10).")
+    color_group = ap.add_mutually_exclusive_group()
+    color_group.add_argument("--color", action="store_true", help="Force ANSI color output.")
+    color_group.add_argument("--no-color", action="store_true", help="Disable ANSI color output.")
     args = ap.parse_args(argv)
+
+    if args.no_color:
+        color = False
+    elif args.color:
+        color = True
+    else:
+        color = should_color(sys.stdout)
 
     lens = LogLens()
     lens.ingest(args.logfile)
@@ -26,7 +37,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{score:.3f}\t{record.raw}")
         return 0
 
-    print(lens.show())
+    print(lens.show(color=color))
     return 0
 
 

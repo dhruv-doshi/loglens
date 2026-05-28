@@ -75,7 +75,7 @@ model-free core that emits a structured `Flow` object; everything downstream
 consumes that object. Embeddings only power the optional semantic query — flow
 reconstruction needs no model.
 
-See [`DESIGN.md`](DESIGN.md) for the full architecture and rationale.
+See [`docs/DESIGN.md`](docs/DESIGN.md) for the full architecture and rationale.
 
 ## License
 
