@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import sys
 
+from . import __version__
 from .colors import should_color
 from .lens import LogLens
 from .render import format_query_result
@@ -10,9 +11,11 @@ from .render import format_query_result
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="loglens", description="Reconstruct execution flows from logs.")
+    ap.add_argument("--version", action="version", version=f"loglens {__version__}")
     ap.add_argument("logfile", help="Path to a log file.")
     ap.add_argument("--query", metavar="TEXT", help="Run semantic query instead of flow view.")
     ap.add_argument("--top-k", type=int, default=10, help="Number of query results (default 10).")
+    ap.add_argument("--no-template", action="store_true", help="Show raw messages instead of mined templates.")
     color_group = ap.add_mutually_exclusive_group()
     color_group.add_argument("--color", action="store_true", help="Force ANSI color output.")
     color_group.add_argument("--no-color", action="store_true", help="Disable ANSI color output.")
@@ -38,7 +41,7 @@ def main(argv: list[str] | None = None) -> int:
             print(format_query_result(record, score, color=color))
         return 0
 
-    print(lens.show(color=color))
+    print(lens.show(color=color, use_template=not args.no_template))
     return 0
 
 

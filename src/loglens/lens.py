@@ -7,7 +7,7 @@ from typing import IO, Iterable
 
 from .correlate import Correlator
 from .models import Flow, LogRecord, build_flows
-from .normalize import normalize_line
+from .normalize import is_continuation, normalize_line
 from .parser import TemplateParser
 from .render import render_flows
 
@@ -38,6 +38,11 @@ class LogLens:
             line = raw.rstrip("\n")
             if not line:
                 continue
+            if self._records and is_continuation(line):
+                prev = self._records[-1]
+                prev.message = f"{prev.message}\n{line}"
+                prev.raw = f"{prev.raw}\n{line}"
+                continue
             record = normalize_line(line, self._seq)
             self.parser.assign(record)
             self._records.append(record)
@@ -47,8 +52,8 @@ class LogLens:
         self.correlator.resolve(self._records)
         return build_flows(self._records)
 
-    def show(self, *, color: bool = False) -> str:
-        return render_flows(self.flows(), color=color)
+    def show(self, *, color: bool = False, use_template: bool = True) -> str:
+        return render_flows(self.flows(), color=color, use_template=use_template)
 
     def query(self, text: str, top_k: int = 10):
         try:

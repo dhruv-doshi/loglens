@@ -335,6 +335,34 @@ flow view.
 **Accept when:** `loglens file.log --query "..."` in a TTY shows colored
 score + level + source + message; piping or `--no-color` yields plain text.
 
+### Step 9.4 — Real-log polish (v0.1.4)
+```
+Run loglens against three realistic samples (nginx Combined Log Format,
+k8s CRI container stdout, Django/Python logging) and fix every bug the
+shakedown surfaces. New normalize.py branches:
+  - Kubernetes CRI prefix `<rfc3339> (stdout|stderr) [FP] <inner>` is
+    stripped before the cascade, then the inner payload is re-normalized
+    so JSON / fields / level survive intact.
+  - Python logging default `[YYYY-MM-DD HH:MM:SS,ms] LEVEL logger: msg`
+    parsed as a first-class shape; `_parse_ts` learns comma-millis and
+    the Apache `%d/%b/%Y:%H:%M:%S %z` format.
+  - Apache/nginx Combined Log Format mapped: request → message,
+    host → source, status code → level via 5xx=ERROR / 4xx=WARN / 2xx=INFO.
+  - LogLens.ingest folds Python tracebacks into the preceding record using
+    is_continuation() — indented lines, the "Traceback (most recent call
+    last):" header, and "<dotted.path>ExceptionClass: msg" tails all merge,
+    so a 500 error stays attached to its stack trace instead of fanning out
+    into orphan flows.
+Also: default id_fields gain `job_id`/`jobId`/`task_id`/`taskId` for worker
+logs. CLI gains `--version` and `--no-template` (raw message view). Bundle
+three example logs under samples/ so users can `loglens samples/k8s-pod.log`
+out of the box.
+```
+**Accept when:** running loglens on each of samples/nginx-access.log,
+samples/k8s-pod.log, samples/django-app.log yields readable flows with
+correct timestamps, levels, sources, and (for django) the traceback folded
+into its ERROR record.
+
 ---
 
 ## Final V1 layout (target)

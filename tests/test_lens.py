@@ -41,6 +41,23 @@ def test_ingest_from_file(tmp_path):
     assert flows[0].flow_id == "F"
 
 
+def test_multiline_traceback_appended_to_previous_record():
+    lines = [
+        '[2026-05-28 10:32:02,500] ERROR app.x: boom',
+        '  File "/app/x.py", line 1, in f',
+        '    raise RuntimeError("x")',
+        '[2026-05-28 10:32:03,000] INFO app.x: next',
+    ]
+    lens = LogLens()
+    lens.ingest(lines)
+    # The two indented lines should fold into the ERROR record, not stand alone.
+    assert len(lens._records) == 2
+    assert "File" in lens._records[0].message
+    assert "RuntimeError" in lens._records[0].message
+    assert lens._records[0].level == "ERROR"
+    assert lens._records[1].message == "next"
+
+
 def test_handler_captures_emitted_logs():
     lens = LogLens()
     handler = LogLensHandler(lens)

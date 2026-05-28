@@ -12,20 +12,20 @@ def _fmt_ts(r: LogRecord) -> str:
     return r.ts.isoformat() if r.ts is not None else "-"
 
 
-def _fmt_text(r: LogRecord, color: bool) -> str:
-    text = r.template or r.message
+def _fmt_text(r: LogRecord, color: bool, use_template: bool) -> str:
+    text = (r.template or r.message) if use_template else (r.message or r.raw)
     if not color:
         return text
     return _PLACEHOLDER_RE.sub(lambda m: paint(m.group(0), DIM, True), text)
 
 
-def _fmt_record(r: LogRecord, color: bool) -> str:
+def _fmt_record(r: LogRecord, color: bool, use_template: bool = True) -> str:
     ts = paint(_fmt_ts(r), DIM, color)
     level_raw = r.level or "-"
     level = paint(level_raw, level_color(r.level), color) if r.level else level_raw
     source_raw = r.source or "-"
     source = paint(source_raw, MAGENTA, color) if r.source else source_raw
-    return f"  {ts}  {level}  {source}  {_fmt_text(r, color)}"
+    return f"  {ts}  {level}  {source}  {_fmt_text(r, color, use_template)}"
 
 
 def _fmt_duration(flow: Flow) -> str:
@@ -47,7 +47,9 @@ def format_query_result(record: LogRecord, score: float, *, color: bool = False)
     return f"{score_str}{_fmt_record(record, color)}"
 
 
-def render_flows(flows: list[Flow], *, color: bool = False) -> str:
+def render_flows(
+    flows: list[Flow], *, color: bool = False, use_template: bool = True
+) -> str:
     out: list[str] = []
     for flow in flows:
         out.append(_fmt_header(flow, color))
@@ -56,14 +58,14 @@ def render_flows(flows: list[Flow], *, color: bool = False) -> str:
         while i < len(recs):
             r = recs[i]
             count = 1
-            if r.template_id is not None:
+            if use_template and r.template_id is not None:
                 j = i + 1
                 while j < len(recs) and recs[j].template_id == r.template_id:
                     count += 1
                     j += 1
             else:
                 j = i + 1
-            line = _fmt_record(r, color)
+            line = _fmt_record(r, color, use_template)
             if count > 1:
                 line += paint(f"  ×{count}", DIM, color)
             out.append(line)

@@ -62,10 +62,25 @@ string-format roundtrip — so level, source, and timestamps stay clean.
 ```
 loglens app.log                              # print grouped flow view
 loglens app.log --query "timeout" --top-k 5  # rank lines by relevance (needs [ai])
+loglens app.log --no-template                # show raw messages instead of mined templates
+loglens app.log --color | less -R            # force color when piping
+loglens --version
 ```
 
 Without the `[ai]` extra installed, `--query` exits non-zero with the install
 hint.
+
+## Try it on sample logs
+
+`samples/` ships with three real-world shapes — nginx access, Kubernetes pod
+stdout, and Django/Python logging — so you can see what loglens does without
+hunting for a log file:
+
+```
+loglens samples/nginx-access.log
+loglens samples/k8s-pod.log
+loglens samples/django-app.log
+```
 
 ## How it works
 

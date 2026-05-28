@@ -12,6 +12,8 @@ _DEFAULT_ID_FIELDS = [
     "span_id",
     "session_id",
     "txn_id",
+    "job_id", "jobId",
+    "task_id", "taskId",
     "id",
 ]
 

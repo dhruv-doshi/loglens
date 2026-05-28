@@ -1,0 +1,7 @@
+2026-05-28T10:32:00.123456789Z stdout F {"level":"info","ts":"2026-05-28T10:32:00.123Z","logger":"worker","msg":"job picked","job_id":"j-7c1f"}
+2026-05-28T10:32:00.234567890Z stdout F {"level":"info","ts":"2026-05-28T10:32:00.234Z","logger":"worker","msg":"calling downstream","job_id":"j-7c1f","url":"http://billing/charge"}
+2026-05-28T10:32:01.456789012Z stderr F {"level":"warn","ts":"2026-05-28T10:32:01.456Z","logger":"worker","msg":"downstream slow","job_id":"j-7c1f","latency_ms":1222}
+2026-05-28T10:32:02.789012345Z stderr F {"level":"error","ts":"2026-05-28T10:32:02.789Z","logger":"worker","msg":"downstream 500","job_id":"j-7c1f","status":500}
+2026-05-28T10:32:02.890123456Z stdout F {"level":"info","ts":"2026-05-28T10:32:02.890Z","logger":"worker","msg":"job marked complete","job_id":"j-7c1f","status":"ok"}
+2026-05-28T10:32:05.000000000Z stdout F {"level":"info","ts":"2026-05-28T10:32:05.000Z","logger":"worker","msg":"job picked","job_id":"j-8d2a"}
+2026-05-28T10:32:05.100000000Z stdout F {"level":"info","ts":"2026-05-28T10:32:05.100Z","logger":"worker","msg":"job marked complete","job_id":"j-8d2a","status":"ok"}

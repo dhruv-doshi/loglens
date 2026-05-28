@@ -1,0 +1,13 @@
+[2026-05-28 10:32:00,123] INFO django.request: GET /products/ 200 [12.4ms]
+[2026-05-28 10:32:00,456] DEBUG django.db.backends: (0.001) SELECT * FROM products WHERE active = true; args=(); alias=default
+[2026-05-28 10:32:01,001] INFO django.request: POST /cart/add 200 [8.1ms]
+[2026-05-28 10:32:01,234] WARNING django.security.csrf: CSRF token from POST has incorrect length.
+[2026-05-28 10:32:02,500] ERROR django.request: Internal Server Error: /checkout/
+Traceback (most recent call last):
+  File "/app/views.py", line 42, in checkout
+    payment.process(amount)
+  File "/app/payment.py", line 18, in process
+    raise PaymentGatewayError("upstream timeout")
+app.payment.PaymentGatewayError: upstream timeout
+[2026-05-28 10:32:02,750] INFO django.request: POST /checkout/ 500 [241.2ms]
+[2026-05-28 10:32:03,100] INFO django.request: GET /products/ 200 [5.2ms]

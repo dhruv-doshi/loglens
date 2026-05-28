@@ -1,0 +1,31 @@
+ts=2026-05-28T10:32:00.000Z level=info service=monitor msg="health check ok" latency_ms=2
+ts=2026-05-28T10:32:00.050Z level=info service=gateway request_id=req-2e88 method=GET path=/products/BK-22 msg="request received"
+May 28 10:32:00 inventory-svc[2143]: stock checked sku=BK-22 available=14 request_id=req-2e88
+ts=2026-05-28T10:32:00.090Z level=info service=gateway request_id=req-2e88 status=200 msg="response sent"
+ts=2026-05-28T10:32:00.102Z level=info service=gateway request_id=req-7f3a method=POST path=/checkout msg="request received"
+{"timestamp":"2026-05-28T10:32:00.140Z","level":"INFO","logger":"auth","request_id":"req-7f3a","user_id":4471,"message":"token validated"}
+May 28 10:32:00 inventory-svc[2143]: stock reserved sku=BK-22 qty=2 request_id=req-7f3a
+ts=2026-05-28T10:32:00.250Z level=info service=monitor msg="health check ok" latency_ms=2
+{"timestamp":"2026-05-28T10:32:00.260Z","level":"INFO","logger":"payment","request_id":"req-7f3a","amount":59.98,"currency":"USD","message":"charge initiated"}
+ts=2026-05-28T10:32:00.310Z level=info service=gateway request_id=req-9c21 method=POST path=/checkout msg="request received"
+{"timestamp":"2026-05-28T10:32:00.355Z","level":"INFO","logger":"auth","request_id":"req-9c21","user_id":8830,"message":"token validated"}
+May 28 10:32:00 inventory-svc[2143]: stock reserved sku=PN-07 qty=1 request_id=req-9c21
+{"timestamp":"2026-05-28T10:32:00.480Z","level":"INFO","logger":"payment","request_id":"req-9c21","amount":24.50,"currency":"USD","message":"charge initiated"}
+ts=2026-05-28T10:32:00.500Z level=info service=monitor msg="health check ok" latency_ms=3
+2026-05-28 10:32:00,500 INFO [worker] cleanup job started
+2026-05-28 10:32:00,515 INFO [worker] purged 142 expired carts
+2026-05-28 10:32:00,560 INFO [worker] cleanup job finished in 60ms
+{"timestamp":"2026-05-28T10:32:00.690Z","level":"INFO","logger":"payment","request_id":"req-9c21","txn":"ch_3Pj8Kq","message":"charge accepted"}
+ts=2026-05-28T10:32:00.730Z level=info service=gateway request_id=req-9c21 status=200 msg="order confirmed"
+ts=2026-05-28T10:32:00.750Z level=info service=monitor msg="health check ok" latency_ms=2
+{"timestamp":"2026-05-28T10:32:00.760Z","level":"WARN","logger":"payment","request_id":"req-7f3a","attempt":1,"message":"payment gateway call timed out after 500ms"}
+{"timestamp":"2026-05-28T10:32:00.770Z","level":"INFO","logger":"payment","request_id":"req-7f3a","attempt":2,"message":"retrying payment gateway"}
+ts=2026-05-28T10:32:01.000Z level=info service=monitor msg="health check ok" latency_ms=2
+ts=2026-05-28T10:32:01.250Z level=info service=monitor msg="health check ok" latency_ms=3
+{"timestamp":"2026-05-28T10:32:01.280Z","level":"WARN","logger":"payment","request_id":"req-7f3a","attempt":2,"message":"payment gateway call timed out after 500ms"}
+{"timestamp":"2026-05-28T10:32:01.290Z","level":"INFO","logger":"payment","request_id":"req-7f3a","attempt":3,"message":"retrying payment gateway"}
+ts=2026-05-28T10:32:01.500Z level=info service=monitor msg="health check ok" latency_ms=2
+ts=2026-05-28T10:32:01.750Z level=info service=monitor msg="health check ok" latency_ms=2
+{"timestamp":"2026-05-28T10:32:01.800Z","level":"WARN","logger":"payment","request_id":"req-7f3a","attempt":3,"message":"payment gateway call timed out after 500ms"}
+{"timestamp":"2026-05-28T10:32:01.905Z","level":"INFO","logger":"payment","request_id":"req-7f3a","message":"caught PaymentGatewayTimeout: upstream did not respond after 3 attempts; continuing without confirmation"}
+ts=2026-05-28T10:32:01.910Z level=info service=gateway request_id=req-7f3a status=200 msg="order confirmed"
