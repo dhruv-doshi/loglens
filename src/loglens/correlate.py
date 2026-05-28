@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from datetime import datetime
 
-from .models import LogRecord
+from .models import LogRecord, _sortable
 
 _DEFAULT_ID_FIELDS = [
     "trace_id", "traceId",
@@ -88,7 +88,7 @@ class Correlator:
 
         counter = 0
         for _key, recs in groups.items():
-            recs.sort(key=lambda x: (x.ts or datetime.min, x.seq))
+            recs.sort(key=lambda x: (_sortable(x.ts), x.seq))
             current_id: str | None = None
             last_ts: datetime | None = None
             for r in recs:

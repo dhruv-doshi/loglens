@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "loglens"
-version = "0.1.0"
+version = "0.1.1"
 description = "Turn mixed-format logs into a readable reconstruction of execution flow."
 readme = "README.md"
 license = { file = "LICENSE" }

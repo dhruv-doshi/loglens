@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from loglens.models import Flow, LogRecord, build_flows
 
@@ -61,6 +61,21 @@ def test_flow_properties():
     assert flow.end_ts == t0 + timedelta(seconds=5)
     assert flow.duration == timedelta(seconds=5)
     assert flow.event_count == 3
+
+
+def test_build_flows_mixes_naive_and_aware_timestamps():
+    # Regression: real logs interleave tz-aware (ISO with Z) and naive
+    # (syslog, missing ts → datetime.min) timestamps. Sorting must not crash.
+    aware = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    naive = datetime(2026, 1, 1, 12, 0, 1)
+    records = [
+        _rec(0, "A", ts=aware),
+        _rec(1, "A", ts=naive),
+        _rec(2, "B", ts=None),
+        _rec(3, "B", ts=aware),
+    ]
+    flows = build_flows(records)
+    assert {f.flow_id for f in flows} == {"A", "B"}
 
 
 def test_flow_properties_no_timestamps():

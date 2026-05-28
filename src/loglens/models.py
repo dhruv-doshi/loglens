@@ -1,7 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+
+def _sortable(ts: datetime | None) -> datetime:
+    if ts is None:
+        return datetime.min
+    if ts.tzinfo is not None:
+        return ts.astimezone(timezone.utc).replace(tzinfo=None)
+    return ts
 
 
 @dataclass
@@ -60,8 +68,8 @@ def build_flows(records: list[LogRecord]) -> list[Flow]:
 
     flows: list[Flow] = []
     for fid, recs in groups.items():
-        recs.sort(key=lambda r: (r.ts or datetime.min, r.seq))
+        recs.sort(key=lambda r: (_sortable(r.ts), r.seq))
         flows.append(Flow(flow_id=fid, origin=origins[fid], records=recs))
 
-    flows.sort(key=lambda f: f.start_ts or datetime.min)
+    flows.sort(key=lambda f: _sortable(f.start_ts))
     return flows
