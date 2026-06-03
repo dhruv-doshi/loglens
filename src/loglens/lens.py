@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gzip
 import logging
 from contextlib import contextmanager
 from datetime import datetime
@@ -15,7 +16,8 @@ from .render import render_flows
 
 def _iter_lines(source: Iterable[str] | str | Path | IO) -> Iterable[str]:
     if isinstance(source, (str, Path)):
-        with open(source, "r", encoding="utf-8", errors="replace") as fh:
+        opener = gzip.open if str(source).endswith(".gz") else open
+        with opener(source, "rt", encoding="utf-8", errors="replace") as fh:
             for line in fh:
                 yield line
         return

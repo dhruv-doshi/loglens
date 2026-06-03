@@ -11,6 +11,8 @@ from .lens import LogLens
 from .render import (
     format_query_result,
     render_annotations,
+    render_flows_json,
+    render_flows_mermaid,
     render_lineage,
 )
 
@@ -63,6 +65,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--gaps", action="store_true", help="Show structural anomalies per flow.")
     ap.add_argument("--expect", metavar="RULES.yaml", help="Check declared expectation rules.")
     ap.add_argument("--lineage", metavar="VALUE", help="Follow one value across all flows.")
+    ap.add_argument("--json", action="store_true", help="Render flows as JSON.")
+    ap.add_argument("--mermaid", action="store_true", help="Render flows as a Mermaid flowchart.")
     ap.add_argument("--no-template", action="store_true", help="Show raw messages instead of mined templates.")
     color_group = ap.add_mutually_exclusive_group()
     color_group.add_argument("--color", action="store_true", help="Force ANSI color output.")
@@ -95,6 +99,14 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.lineage:
         print(render_lineage(lens.lineage(args.lineage), color=color))
+        return 0
+
+    if args.json:
+        print(render_flows_json(lens.flows()))
+        return 0
+
+    if args.mermaid:
+        print(render_flows_mermaid(lens.flows()))
         return 0
 
     print(lens.show(color=color, use_template=not args.no_template))

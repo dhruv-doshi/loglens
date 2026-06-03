@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 
 from .colors import BOLD, CYAN, DIM, MAGENTA, level_color, paint
@@ -75,6 +76,63 @@ def render_lineage(records: list[LogRecord], *, color: bool = False) -> str:
         fid = paint(r.flow_id or "-", CYAN, color)
         out.append(f"{fid}{_fmt_record(r, color, use_template=False)}")
     return "\n".join(out)
+
+
+def record_to_dict(r: LogRecord) -> dict:
+    """Canonical JSON-serializable view of a LogRecord."""
+    return {
+        "ts": r.ts.isoformat() if r.ts is not None else None,
+        "level": r.level,
+        "source": r.source,
+        "message": r.message,
+        "template": r.template,
+        "template_id": r.template_id,
+        "flow_id": r.flow_id,
+        "flow_origin": r.flow_origin,
+        "seq": r.seq,
+        "fields": r.fields,
+    }
+
+
+def flow_to_dict(flow: Flow) -> dict:
+    """Canonical JSON-serializable view of a Flow."""
+    return {
+        "flow_id": flow.flow_id,
+        "origin": flow.origin,
+        "event_count": flow.event_count,
+        "duration_seconds": (
+            flow.duration.total_seconds() if flow.duration is not None else None
+        ),
+        "records": [record_to_dict(r) for r in flow.records],
+    }
+
+
+def render_flows_json(flows: list[Flow]) -> str:
+    """Render flows as a JSON string for machine consumers."""
+    return json.dumps({"flows": [flow_to_dict(f) for f in flows]}, indent=2)
+
+
+def _mermaid_label(r: LogRecord) -> str:
+    text = (r.template or r.message or "").replace("\n", " ").replace('"', "'")
+    label = f"{r.level or ''} {text}".strip()
+    return label[:80] if label else "(empty)"
+
+
+def render_flows_mermaid(flows: list[Flow]) -> str:
+    """Render the flow tree as a Mermaid flowchart string."""
+    lines = ["flowchart TD"]
+    for fi, flow in enumerate(flows):
+        safe_fid = re.sub(r"\W", "_", flow.flow_id) or f"flow{fi}"
+        lines.append(f'  subgraph {safe_fid}["{flow.flow_id} ({flow.origin})"]')
+        prev = None
+        for ri, r in enumerate(flow.records):
+            nid = f"n{fi}_{ri}"
+            lines.append(f'    {nid}["{_mermaid_label(r)}"]')
+            if prev is not None:
+                lines.append(f"    {prev} --> {nid}")
+            prev = nid
+        lines.append("  end")
+    return "\n".join(lines)
 
 
 def render_flows(

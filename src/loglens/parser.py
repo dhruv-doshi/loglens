@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from drain3 import TemplateMiner
+from drain3.file_persistence import FilePersistence
 from drain3.masking import MaskingInstruction
 from drain3.template_miner_config import TemplateMinerConfig
 
@@ -15,12 +18,15 @@ _MASKS = [
 
 
 class TemplateParser:
-    def __init__(self) -> None:
+    def __init__(self, state_path: str | Path | None = None) -> None:
         config = TemplateMinerConfig()
         config.masking_instructions = [
             MaskingInstruction(pattern=p, mask_with=m) for p, m in _MASKS
         ]
-        self._miner = TemplateMiner(config=config)
+        # With a state_path, Drain3 loads existing template state on start and
+        # saves on update, so template ids stay stable across separate runs.
+        persistence = FilePersistence(str(state_path)) if state_path else None
+        self._miner = TemplateMiner(persistence_handler=persistence, config=config)
 
     def assign(self, record: LogRecord) -> LogRecord:
         result = self._miner.add_log_message(record.message)
