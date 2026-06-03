@@ -33,7 +33,10 @@ def load_rules(path: str | Path) -> list[Rule]:
 
 
 def _text(r: LogRecord) -> str:
-    return (r.template or r.message or "").lower()
+    # Match against the raw message AND the mined template: template masking
+    # (e.g. "charge accepted" -> "charge <*>") can destroy the literal tokens a
+    # rule cares about, so the message must be searched too.
+    return f"{r.message or ''}\n{r.template or ''}".lower()
 
 
 def _matches_after(r: LogRecord, after: str) -> bool:
