@@ -6,8 +6,10 @@ templates, groups events into flows by correlation ID (with a best-effort
 fallback), and renders the result so an architect can see what the code actually
 did — and where it quietly didn't do what it should.
 
-Offline, small footprint, stdlib-first. The only runtime dependency is
-[`drain3`](https://pypi.org/project/drain3/). Semantic query is an opt-in extra.
+Offline, small footprint, stdlib-first. Runtime dependencies are
+[`drain3`](https://pypi.org/project/drain3/) and `PyYAML`. Everything model-based
+or framework-specific is an opt-in extra. LogLens runs **no generative LLM** — its
+analysis (gap detection, expectation rules) is deterministic and explainable.
 
 ## Install
 
@@ -15,11 +17,26 @@ Offline, small footprint, stdlib-first. The only runtime dependency is
 pip install loglens
 ```
 
-Optional offline semantic error query (adds `sentence-transformers` + `rank-bm25`):
+Optional extras:
 
 ```
-pip install loglens[ai]
+pip install loglens[ai]    # offline semantic query (sentence-transformers + rank-bm25)
+pip install loglens[mcp]   # expose the tools over a Model Context Protocol server
 ```
+
+## What's in V2
+
+Built on the deterministic V1 core (normalize → template-mine → correlate →
+render), V2 adds, all without an LLM:
+
+- **Gap & anomaly detection** — dangling starts, exceptions logged below `ERROR`,
+  unresolved retries.
+- **Declared expectation rules** — a tiny YAML "after X expect one of Y" check.
+- **Lineage** — follow one value (order id, user id) across every flow.
+- **Runtime call tracer** — instrument running code via `sys.setprofile` and emit
+  the *same* `Flow` object, so the renderer and gap detection work on traces too.
+- **Agent tool surface** — JSON-in/JSON-out functions (+ optional MCP server).
+- **Machine output** — JSON and Mermaid renderers; transparent `.gz`/NDJSON ingest.
 
 ## Library usage
 
@@ -36,6 +53,40 @@ for record, score in lens.query("connection refused", top_k=5):
 
 `lens.flows()` returns a `list[Flow]` if you want the structured object instead
 of rendered text.
+
+### Understanding a flow
+
+```python
+lens = LogLens()
+lens.ingest("app.log")
+
+for flow_id, annotations in lens.gaps().items():       # structural anomalies
+    for a in annotations:
+        print(flow_id, a.kind, a.detail)
+
+lens.check_expectations("rules.yaml")                   # declared expectations
+lens.lineage("ORD-42")                                  # follow one value
+```
+
+### Tracing running code
+
+```python
+lens = LogLens()
+with lens.trace(include=["/path/to/your/package"]):     # dev/debug only — overhead
+    run_your_code()
+print(lens.show())                                      # traced flows render like logs
+```
+
+### Agent tools
+
+```python
+from loglens import tools
+
+tools.parse_logs(text)                  # {"flows": [...]}
+tools.find_gaps(text)                   # {"annotations": [...]}
+tools.check_expectations(text, "rules.yaml")
+tools.TOOL_SCHEMAS                       # JSON Schema per tool
+```
 
 ## `logging.Handler` middleware
 
@@ -62,13 +113,19 @@ string-format roundtrip — so level, source, and timestamps stay clean.
 ```
 loglens app.log                              # print grouped flow view
 loglens app.log --query "timeout" --top-k 5  # rank lines by relevance (needs [ai])
+loglens app.log --gaps                        # show structural anomalies per flow
+loglens app.log --expect rules.yaml           # check declared expectation rules
+loglens app.log --lineage ORD-42              # follow one value across flows
+loglens app.log --json                        # machine-readable JSON
+loglens app.log --mermaid                     # Mermaid flowchart
 loglens app.log --no-template                # show raw messages instead of mined templates
 loglens app.log --color | less -R            # force color when piping
+loglens trace -m your.module                  # trace a module's call tree as flows
 loglens --version
 ```
 
-Without the `[ai]` extra installed, `--query` exits non-zero with the install
-hint.
+`.gz` files are ingested transparently. Without the `[ai]` extra installed,
+`--query` exits non-zero with the install hint.
 
 ## Try it on sample logs
 
@@ -87,8 +144,10 @@ loglens samples/django-app.log
 Six layers: ingestion → normalization → template mining (Drain3) → correlation
 (4-tier ID cascade) → analysis → presentation. Layers 1–4 are a deterministic,
 model-free core that emits a structured `Flow` object; everything downstream
-consumes that object. Embeddings only power the optional semantic query — flow
-reconstruction needs no model.
+consumes that object. The runtime tracer is a second ingestion path that emits the
+*same* `Flow`, so the renderer, gap detection, and agent tools all serve logs and
+traces without change. Embeddings only power the optional semantic query — flow
+reconstruction and analysis need no model.
 
 See [`docs/DESIGN.md`](docs/DESIGN.md) for the full architecture and rationale.
 
