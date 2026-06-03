@@ -88,6 +88,22 @@ tools.check_expectations(text, "rules.yaml")
 tools.TOOL_SCHEMAS                       # JSON Schema per tool
 ```
 
+With the `[mcp]` extra installed, the same tools are served over the Model Context
+Protocol — start the server with the `loglens-mcp` console script.
+
+### Stable template ids across runs
+
+Template ids are in-memory by default. Pass a `state_path` to persist Drain3's
+learned templates so ids stay stable across separate runs (useful when an agent
+calls the tools repeatedly):
+
+```python
+from loglens.parser import TemplateParser
+
+lens = LogLens()
+lens.parser = TemplateParser(state_path="loglens.state")
+```
+
 ## `logging.Handler` middleware
 
 Capture live logs from a running program into the same flow view:
@@ -129,14 +145,26 @@ loglens --version
 
 ## Try it on sample logs
 
-`samples/` ships with three real-world shapes — nginx access, Kubernetes pod
-stdout, and Django/Python logging — so you can see what loglens does without
-hunting for a log file:
+`samples/` ships with four real-world shapes — nginx access, Kubernetes pod
+stdout, Django/Python logging, and a mixed-format checkout incident — so you can
+see what loglens does without hunting for a log file:
 
 ```
 loglens samples/nginx-access.log
 loglens samples/k8s-pod.log
 loglens samples/django-app.log
+loglens samples/checkout-incident.log
+```
+
+The checkout incident interleaves JSON, logfmt, syslog and Python logging across
+several requests. Point the analysis at it:
+
+```
+loglens samples/checkout-incident.log --gaps
+#   req-7f3a: 2 unresolved retries + a PaymentGatewayTimeout swallowed at INFO
+#   (the successful checkout req-9c21 stays clean)
+
+loglens samples/checkout-incident.log --lineage req-7f3a   # one request, every service
 ```
 
 ## How it works
