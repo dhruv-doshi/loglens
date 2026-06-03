@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import os
+import runpy
 import sys
 
 from . import __version__
@@ -13,7 +15,46 @@ from .render import (
 )
 
 
+def _resolve_color(args) -> bool:
+    if args.no_color:
+        return False
+    if args.color:
+        return True
+    return should_color(sys.stdout)
+
+
+def _trace_main(argv: list[str] | None) -> int:
+    ap = argparse.ArgumentParser(
+        prog="loglens trace",
+        description="Run a module under the call tracer and print its flow tree.",
+    )
+    ap.add_argument("-m", "--module", required=True, help="Module to import and run.")
+    ap.add_argument(
+        "--include",
+        action="append",
+        metavar="PREFIX",
+        help="Path prefix(es) to record (default: current working directory).",
+    )
+    ap.add_argument("--capture-args", action="store_true", help="Record repr() of call args.")
+    color_group = ap.add_mutually_exclusive_group()
+    color_group.add_argument("--color", action="store_true", help="Force ANSI color output.")
+    color_group.add_argument("--no-color", action="store_true", help="Disable ANSI color output.")
+    args = ap.parse_args(argv)
+
+    color = _resolve_color(args)
+    include = args.include or [os.getcwd()]
+    lens = LogLens()
+    with lens.trace(include=include, capture_args=args.capture_args):
+        runpy.run_module(args.module, run_name="__main__")
+    print(lens.show(color=color))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
+    raw = sys.argv[1:] if argv is None else argv
+    if raw and raw[0] == "trace":
+        return _trace_main(raw[1:])
+
     ap = argparse.ArgumentParser(prog="loglens", description="Reconstruct execution flows from logs.")
     ap.add_argument("--version", action="version", version=f"loglens {__version__}")
     ap.add_argument("logfile", help="Path to a log file.")
@@ -26,14 +67,9 @@ def main(argv: list[str] | None = None) -> int:
     color_group = ap.add_mutually_exclusive_group()
     color_group.add_argument("--color", action="store_true", help="Force ANSI color output.")
     color_group.add_argument("--no-color", action="store_true", help="Disable ANSI color output.")
-    args = ap.parse_args(argv)
+    args = ap.parse_args(raw)
 
-    if args.no_color:
-        color = False
-    elif args.color:
-        color = True
-    else:
-        color = should_color(sys.stdout)
+    color = _resolve_color(args)
 
     lens = LogLens()
     lens.ingest(args.logfile)

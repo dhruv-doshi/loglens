@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import logging
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import IO, Iterable
+from typing import IO, Iterable, Iterator
 
 from .correlate import Correlator
-from .models import Flow, LogRecord, build_flows
+from .models import Flow, LogRecord, _sortable, build_flows
 from .normalize import is_continuation, normalize_line
 from .parser import TemplateParser
 from .render import render_flows
@@ -31,6 +32,7 @@ class LogLens:
         self.parser = TemplateParser()
         self.correlator = Correlator()
         self._records: list[LogRecord] = []
+        self._traced_flows: list[Flow] = []
         self._seq = 0
 
     def ingest(self, source: Iterable[str] | str | Path | IO) -> None:
@@ -50,7 +52,28 @@ class LogLens:
 
     def flows(self) -> list[Flow]:
         self.correlator.resolve(self._records)
-        return build_flows(self._records)
+        # Traced flows are already grouped (trace-NNNN) and must not be
+        # re-correlated; merge them in and sort the combined set by start time.
+        combined = build_flows(self._records) + list(self._traced_flows)
+        combined.sort(key=lambda f: _sortable(f.start_ts))
+        return combined
+
+    @contextmanager
+    def trace(
+        self, include: list[str], capture_args: bool = False
+    ) -> Iterator[None]:
+        """Run user code under the call tracer; ingest the resulting flows into the
+        same store as logs so show()/gaps() work over traced flows too.
+
+        Dev/debug only — sys.setprofile adds overhead; max_events bounds memory.
+        """
+        from .tracer import Tracer
+        from .trace_to_flow import to_flows
+
+        tracer = Tracer(include=include, capture_args=capture_args)
+        with tracer:
+            yield
+        self._traced_flows.extend(to_flows(tracer.events()))
 
     def show(self, *, color: bool = False, use_template: bool = True) -> str:
         return render_flows(self.flows(), color=color, use_template=use_template)
