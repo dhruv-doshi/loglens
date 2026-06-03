@@ -15,6 +15,9 @@ ENTRY_KEYWORDS = (
     "entering",
     "opening",
 )
+# Request/operation lifecycle endings — used by dangling_start. Broad on purpose:
+# a flow that reaches ANY of these has not "dangled". Includes business-level
+# completions like "confirmed"/"accepted" so successful flows aren't flagged.
 TERMINAL_KEYWORDS = (
     "finished",
     "done",
@@ -24,23 +27,51 @@ TERMINAL_KEYWORDS = (
     "closed",
     "failed",
     "error",
+    "confirmed",
+    "accepted",
+    "acknowledged",
+    "responded",
+    "served",
+    "rejected",
+    "aborted",
+    "cancelled",
+    "canceled",
 )
 EXCEPTION_SIGNATURES = (
     "traceback",
     "exception",
     "error:",
     " at ",
+    "caught ",
+    "stack trace",
 )
-SUCCESS_KEYWORDS = (
+# CamelCase exception/fault class names (e.g. PaymentGatewayTimeout), which a
+# swallowed error often logs without any of the literal signatures above.
+_EXCEPTION_NAME_RE = re.compile(
+    r"\b[A-Z][A-Za-z0-9]*(?:Error|Exception|Timeout|Failure|Fault)\b"
+)
+# Words showing a RETRIED operation actually reached an outcome (success or a
+# definitive give-up/failure), so the retry is resolved. Deliberately excludes
+# vague flow-level terminals like "confirmed"/"sent" that don't speak to whether
+# the retried operation itself succeeded — that gap is the architect's to judge.
+RETRY_RESOLUTION_KEYWORDS = (
     "success",
     "succeeded",
+    "recovered",
+    "resolved",
     "completed",
     "complete",
-    "done",
-    "finished",
-    "sent",
-    "resolved",
+    "established",
+    "connected",
+    "accepted",
     "ok",
+    "gave up",
+    "giving up",
+    "abandon",
+    "aborted",
+    "abort",
+    "failed",
+    "failure",
 )
 RETRY_RE = re.compile(r"\b(?:retry|retrying|attempt\s+\d+)\b", re.IGNORECASE)
 
@@ -111,7 +142,8 @@ def _dangling_starts(flow: Flow) -> list[Annotation]:
 def _downgraded_errors(flow: Flow) -> list[Annotation]:
     out: list[Annotation] = []
     for r in flow.records:
-        if not _has_any(_haystack(r), EXCEPTION_SIGNATURES):
+        hay = _haystack(r)
+        if not (_has_any(hay, EXCEPTION_SIGNATURES) or _EXCEPTION_NAME_RE.search(hay)):
             continue
         rank = _level_rank(r.level)
         if rank is not None and rank < _ERROR_RANK:
@@ -135,8 +167,7 @@ def _unresolved_retries(flow: Flow) -> list[Annotation]:
             continue
         later = recs[i + 1 :]
         resolved = any(
-            _has_any(_msg(x), SUCCESS_KEYWORDS) or _has_any(_msg(x), TERMINAL_KEYWORDS)
-            for x in later
+            _has_any(_msg(x), RETRY_RESOLUTION_KEYWORDS) for x in later
         )
         if not resolved:
             out.append(
@@ -144,7 +175,7 @@ def _unresolved_retries(flow: Flow) -> list[Annotation]:
                     flow.flow_id,
                     r.seq,
                     "unresolved_retry",
-                    f"retry '{text.strip()}' has no later success or terminal event",
+                    f"retry '{text.strip()}' has no later success or give-up",
                 )
             )
     return out

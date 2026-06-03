@@ -74,3 +74,51 @@ def test_error_level_exception_not_downgraded():
         _rec(0, "Traceback (most recent call last): Exception: boom", level="ERROR"),
     ])
     assert [a for a in detect_gaps(flow) if a.kind == "downgraded_error"] == []
+
+
+def test_confirmed_terminal_suppresses_dangling_start():
+    # A successful checkout ending in "order confirmed" must not be flagged.
+    flow = _flow([
+        _rec(0, "request received", level="INFO"),
+        _rec(1, "charge accepted", level="INFO"),
+        _rec(2, "order confirmed", level="INFO"),
+    ])
+    assert [a for a in detect_gaps(flow) if a.kind == "dangling_start"] == []
+
+
+def test_swallowed_camelcase_exception_downgraded():
+    # No literal "exception"/"traceback", but a CamelCase *Timeout caught at INFO.
+    flow = _flow([
+        _rec(0, "caught PaymentGatewayTimeout: upstream did not respond; continuing", level="INFO"),
+    ])
+    anns = detect_gaps(flow)
+    assert any(a.kind == "downgraded_error" for a in anns)
+
+
+def test_plain_timeout_message_at_warn_not_downgraded():
+    # A lowercase "timed out" at WARN is the condition being retried, not a
+    # swallowed exception — must stay quiet to avoid noise.
+    flow = _flow([
+        _rec(0, "payment gateway call timed out after 500ms", level="WARN"),
+    ])
+    assert [a for a in detect_gaps(flow) if a.kind == "downgraded_error"] == []
+
+
+def test_retry_not_resolved_by_vague_confirmed():
+    # "order confirmed" is a flow-level terminal, not proof the retried payment
+    # succeeded — the unresolved retry must still surface.
+    flow = _flow([
+        _rec(0, "retrying payment gateway", level="INFO"),
+        _rec(1, "caught PaymentGatewayTimeout: continuing without confirmation", level="INFO"),
+        _rec(2, "order confirmed", level="INFO"),
+    ])
+    anns = detect_gaps(flow)
+    assert any(a.kind == "unresolved_retry" for a in anns)
+
+
+def test_retry_resolved_by_success():
+    flow = _flow([
+        _rec(0, "retrying payment gateway", level="WARN"),
+        _rec(1, "payment recovered", level="INFO"),
+    ])
+    assert [a for a in detect_gaps(flow) if a.kind == "unresolved_retry"] == []
