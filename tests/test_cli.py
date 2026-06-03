@@ -14,6 +14,31 @@ def test_cli_prints_flows(tmp_path, capsys):
     assert "field:trace_id" in out
 
 
+def test_cli_gaps(tmp_path, capsys):
+    p = tmp_path / "sample.log"
+    p.write_text(
+        '{"ts": "2026-01-01T12:00:00Z", "level": "INFO", "msg": "request received", "trace_id": "A"}\n'
+        '{"ts": "2026-01-01T12:00:01Z", "level": "INFO", "msg": "still going", "trace_id": "A"}\n'
+    )
+    rc = main([str(p), "--gaps", "--no-color"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "dangling_start" in out
+
+
+def test_cli_lineage(tmp_path, capsys):
+    p = tmp_path / "sample.log"
+    p.write_text(
+        '{"ts": "2026-01-01T12:00:00Z", "msg": "order ORD-7 created", "trace_id": "A"}\n'
+        '{"ts": "2026-01-01T12:00:01Z", "msg": "unrelated", "trace_id": "A"}\n'
+    )
+    rc = main([str(p), "--lineage", "ORD-7", "--no-color"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "ORD-7 created" in out
+    assert "unrelated" not in out
+
+
 def test_cli_query_without_ai_extra_exits_clean(tmp_path, capsys, monkeypatch):
     p = tmp_path / "sample.log"
     p.write_text('{"ts": "2026-01-01T12:00:00Z", "msg": "x", "trace_id": "A"}\n')

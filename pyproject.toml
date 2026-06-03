@@ -9,7 +9,7 @@ description = "Turn mixed-format logs into a readable reconstruction of executio
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
-dependencies = ["drain3>=0.9.11"]
+dependencies = ["drain3>=0.9.11", "PyYAML>=5.1"]
 
 [project.optional-dependencies]
 ai = ["sentence-transformers>=2.2", "rank-bm25>=0.2"]

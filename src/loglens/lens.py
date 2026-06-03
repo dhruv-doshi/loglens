@@ -55,6 +55,26 @@ class LogLens:
     def show(self, *, color: bool = False, use_template: bool = True) -> str:
         return render_flows(self.flows(), color=color, use_template=use_template)
 
+    def gaps(self) -> dict[str, list]:
+        from .gaps import detect_gaps
+
+        return {f.flow_id: detect_gaps(f) for f in self.flows()}
+
+    def check_expectations(self, rules_path: str | Path) -> list:
+        from .expectations import check, load_rules
+
+        rules = load_rules(rules_path)
+        out: list = []
+        for f in self.flows():
+            out.extend(check(f, rules))
+        return out
+
+    def lineage(self, value: str) -> list[LogRecord]:
+        from .lineage import trace
+
+        self.flows()  # ensure flow_id is resolved for display
+        return trace(self._records, value)
+
     def query(self, text: str, top_k: int = 10):
         try:
             from .analyzer import EmbeddingQuery

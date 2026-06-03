@@ -58,6 +58,47 @@ def test_multiline_traceback_appended_to_previous_record():
     assert lens._records[1].message == "next"
 
 
+def test_gaps_over_flows():
+    lines = [
+        '{"ts": "2026-01-01T12:00:00Z", "level": "INFO", "msg": "request received", "trace_id": "A"}',
+        '{"ts": "2026-01-01T12:00:01Z", "level": "INFO", "msg": "still working", "trace_id": "A"}',
+    ]
+    lens = LogLens()
+    lens.ingest(lines)
+    gaps = lens.gaps()
+    assert "A" in gaps
+    assert any(a.kind == "dangling_start" for a in gaps["A"])
+
+
+def test_check_expectations(tmp_path):
+    rules = tmp_path / "rules.yaml"
+    rules.write_text(
+        "- after: charge initiated\n  expect_one_of: [confirmed]\n"
+    )
+    lines = [
+        '{"ts": "2026-01-01T12:00:00Z", "level": "INFO", "msg": "charge initiated", "trace_id": "A"}',
+        '{"ts": "2026-01-01T12:00:01Z", "level": "INFO", "msg": "response sent", "trace_id": "A"}',
+    ]
+    lens = LogLens()
+    lens.ingest(lines)
+    violations = lens.check_expectations(rules)
+    assert len(violations) == 1
+    assert violations[0].kind == "expectation_violation"
+
+
+def test_lineage_follows_value():
+    lines = [
+        '{"ts": "2026-01-01T12:00:00Z", "msg": "order ORD-7 created", "trace_id": "A"}',
+        '{"ts": "2026-01-01T12:00:01Z", "msg": "unrelated", "trace_id": "A"}',
+        '{"ts": "2026-01-01T12:00:02Z", "msg": "order ORD-7 shipped", "trace_id": "B"}',
+    ]
+    lens = LogLens()
+    lens.ingest(lines)
+    result = lens.lineage("ORD-7")
+    assert [r.message for r in result] == ["order ORD-7 created", "order ORD-7 shipped"]
+    assert all(r.flow_id for r in result)
+
+
 def test_handler_captures_emitted_logs():
     lens = LogLens()
     handler = LogLensHandler(lens)

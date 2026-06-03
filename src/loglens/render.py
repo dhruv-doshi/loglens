@@ -47,6 +47,36 @@ def format_query_result(record: LogRecord, score: float, *, color: bool = False)
     return f"{score_str}{_fmt_record(record, color)}"
 
 
+def render_annotations(annotations, *, color: bool = False) -> str:
+    """Render gap/expectation Annotations grouped by flow_id."""
+    if not annotations:
+        return "No anomalies detected."
+    by_flow: dict[str, list] = {}
+    for a in annotations:
+        by_flow.setdefault(a.flow_id, []).append(a)
+    out: list[str] = []
+    for fid, anns in by_flow.items():
+        out.append(paint(fid, CYAN + BOLD, color))
+        for a in anns:
+            kind = paint(a.kind, level_color("WARN"), color)
+            seq = paint(f"seq={a.record_seq}", DIM, color)
+            out.append(f"  [{kind}]  {seq}  {a.detail}")
+        out.append("")
+    return "\n".join(out).rstrip("\n")
+
+
+def render_lineage(records: list[LogRecord], *, color: bool = False) -> str:
+    """Render matching records with their flow_id shown, so an entity can be
+    followed across flows."""
+    if not records:
+        return "No matching records."
+    out: list[str] = []
+    for r in records:
+        fid = paint(r.flow_id or "-", CYAN, color)
+        out.append(f"{fid}{_fmt_record(r, color, use_template=False)}")
+    return "\n".join(out)
+
+
 def render_flows(
     flows: list[Flow], *, color: bool = False, use_template: bool = True
 ) -> str:

@@ -6,7 +6,11 @@ import sys
 from . import __version__
 from .colors import should_color
 from .lens import LogLens
-from .render import format_query_result
+from .render import (
+    format_query_result,
+    render_annotations,
+    render_lineage,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -15,6 +19,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("logfile", help="Path to a log file.")
     ap.add_argument("--query", metavar="TEXT", help="Run semantic query instead of flow view.")
     ap.add_argument("--top-k", type=int, default=10, help="Number of query results (default 10).")
+    ap.add_argument("--gaps", action="store_true", help="Show structural anomalies per flow.")
+    ap.add_argument("--expect", metavar="RULES.yaml", help="Check declared expectation rules.")
+    ap.add_argument("--lineage", metavar="VALUE", help="Follow one value across all flows.")
     ap.add_argument("--no-template", action="store_true", help="Show raw messages instead of mined templates.")
     color_group = ap.add_mutually_exclusive_group()
     color_group.add_argument("--color", action="store_true", help="Force ANSI color output.")
@@ -39,6 +46,19 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         for record, score in results:
             print(format_query_result(record, score, color=color))
+        return 0
+
+    if args.gaps:
+        annotations = [a for anns in lens.gaps().values() for a in anns]
+        print(render_annotations(annotations, color=color))
+        return 0
+
+    if args.expect:
+        print(render_annotations(lens.check_expectations(args.expect), color=color))
+        return 0
+
+    if args.lineage:
+        print(render_lineage(lens.lineage(args.lineage), color=color))
         return 0
 
     print(lens.show(color=color, use_template=not args.no_template))
